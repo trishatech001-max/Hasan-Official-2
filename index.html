@@ -1,0 +1,253 @@
+<!doctype html>
+
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Service Center</title>
+  <meta name="description" content="Service Center — পোস্ট, নোটিশ বোর্ড, অর্ডার ও যোগাযোগ।">
+  <style>
+    :root{--bg:#f6fafc;--card:#ffffff;--accent:#0ea5a4;--muted:#6b7280;--maxw:900px;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:var(--bg);color:#0f1724}
+    .wrap{max-width:var(--maxw);margin:12px auto;padding:12px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{font-weight:700;font-size:18px}
+    .btn{background:var(--accent);color:white;padding:8px 12px;border-radius:8px;text-decoration:none;border:0;cursor:pointer}
+    .ghost{background:transparent;border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px}
+    /* Notice board */
+    .notice{background:linear-gradient(90deg,#fff,#f8fffe);padding:12px;border-radius:10px;margin-top:12px;box-shadow:0 4px 18px rgba(2,6,23,0.06)}
+    .notice h2{margin:0 0 6px;font-size:16px}
+    .notice-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .notice-item{background:#e8fffe;padding:8px;border-radius:8px;font-size:14px}/* Posts area */
+.posts{margin-top:16px;display:grid;grid-template-columns:1fr;gap:12px}
+.post{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.04)}
+.post img{max-width:100%;border-radius:8px;margin-top:8px}
+.post .meta{font-size:13px;color:var(--muted);margin-top:6px}
+.post .actions{display:flex;gap:8px;margin-top:10px}
+
+/* Create form modal-like */
+.panel{background:var(--card);padding:12px;border-radius:10px;margin-top:12px}
+label{display:block;margin-top:8px;font-size:14px}
+input[type=text],input[type=email],textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef6;font-size:14px}
+input[type=file]{margin-top:6px}
+
+/* Comments */
+.comments{margin-top:10px;border-top:1px dashed rgba(0,0,0,0.06);padding-top:8px}
+.comment{padding:8px;border-radius:8px;background:#fbfdfd;margin-top:8px}
+.small{font-size:13px;color:var(--muted)}
+
+/* About & Contact */
+.about, .contact{margin-top:18px;background:var(--card);padding:12px;border-radius:10px}
+
+footer{margin:22px 0;text-align:center;color:var(--muted);font-size:13px}
+
+@media (min-width:720px){
+  .posts{grid-template-columns:repeat(2,1fr)}
+}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Service Center</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="adminToggle">Admin Login</button>
+      </div>
+    </header><!-- Notice board (shows newest first) -->
+<section class="notice" id="noticeBoard">
+  <h2>নোটিশ বোর্ড</h2>
+  <div class="notice-list" id="noticeList"></div>
+</section>
+
+<!-- Admin panel for creating notices & posts (only shown when admin logged in) -->
+<section class="panel" id="adminPanel" style="display:none">
+  <h3>অ্যাডমিন প্যানেল</h3>
+  <small class="small">(ডেমোতে অ্যাডমিন লগইন লোকাল-স্টোরেজে; বাস্তবে ব্যাকএন্ড দিয়ে সুরক্ষিত করুন)</small>
+  <hr>
+  <div>
+    <h4>নোটিশ তৈরি কর</h4>
+    <label>নোটিশ টেক্সট</label>
+    <input type="text" id="noticeText" placeholder="নোটিশ লিখুন...">
+    <button class="btn" id="addNotice">নোটিশ যোগ কর</button>
+  </div>
+  <hr>
+  <div>
+    <h4>নতুন পোস্ট</h4>
+    <label>শিরোনাম</label>
+    <input type="text" id="postTitle" placeholder="প্রোডাক্ট বা সার্ভিস টাইটেল">
+    <label>বর্ণনা</label>
+    <textarea id="postBody" rows="4" placeholder="বিস্তারিত লিখুন..."></textarea>
+    <label>ছবি (অপশনাল)</label>
+    <input type="file" id="postImage" accept="image/*">
+    <label>অর্ডার/কন্টাক্ট ইমেইল (অপশনাল)</label>
+    <input type="email" id="postOrderEmail" placeholder="order@example.com">
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn" id="addPost">পোস্ট প্রকাশ করুন</button>
+      <button class="ghost" id="logoutAdmin">লগআউট</button>
+    </div>
+  </div>
+</section>
+
+<!-- Posts list (admin posts only) -->
+<section id="postsArea" class="posts"></section>
+
+<!-- About -->
+<section class="about">
+  <h3>About / আমার সম্পর্কে</h3>
+  <p id="aboutText">Service Center — আমরা মানসম্পন্ন সার্ভিস ও প্রোডাক্ট সরবরাহ করি। (এখানে তোমার বর্ণনা লিখে দাও)</p>
+</section>
+
+<!-- Contact -->
+<section class="contact">
+  <h3>Contact / যোগাযোগ</h3>
+  <p class="small">মোবাইল: <span id="phone">+8801XXXXXXXXX</span></p>
+  <p class="small">ইমেইল: <span id="email">you@example.com</span></p>
+</section>
+
+<footer>© 2025 Service Center</footer>
+
+  </div>  <script>
+    // --- Simple client-side storage model ---
+    const AUTH_KEY = 'sc_admin_auth';
+    const NOTICES_KEY = 'sc_notices';
+    const POSTS_KEY = 'sc_posts';
+    const ADMIN_PASSWORD = 'adminpass'; // ডিফল্ট পাসওয়ার্ড: adminpass (চাইলে পরিবর্তন করে দেব)
+
+    // Helpers: load/save
+    function loadJSON(key, fallback){
+      try{ const v = localStorage.getItem(key); return v? JSON.parse(v): fallback }
+      catch(e){return fallback}
+    }
+    function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+
+    // Initial load
+    let notices = loadJSON(NOTICES_KEY, []); // newest first
+    let posts = loadJSON(POSTS_KEY, []);
+
+    const noticeListEl = document.getElementById('noticeList');
+    const postsArea = document.getElementById('postsArea');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminToggle = document.getElementById('adminToggle');
+
+    function renderNotices(){
+      noticeListEl.innerHTML = '';
+      if(notices.length === 0){
+        noticeListEl.innerHTML = '<div class="small">কোনো নোটিশ নেই।</div>';
+        return;
+      }
+      notices.forEach(n=>{
+        const d = document.createElement('div'); d.className='notice-item';
+        d.textContent = n.text + ' — ' + new Date(n.ts).toLocaleString();
+        noticeListEl.appendChild(d);
+      })
+    }
+
+    function renderPosts(){
+      postsArea.innerHTML = '';
+      if(posts.length === 0){ postsArea.innerHTML = '<div class="small">কোনো পোস্ট নেই।</div>'; return }
+      posts.forEach((p, idx)=>{
+        const el = document.createElement('article'); el.className='post';
+        const title = document.createElement('h4'); title.textContent = p.title; el.appendChild(title);
+        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = 'পাবলিশ: ' + new Date(p.ts).toLocaleString(); el.appendChild(meta);
+        const body = document.createElement('p'); body.textContent = p.body; el.appendChild(body);
+        if(p.img){ const img = document.createElement('img'); img.src = p.img; el.appendChild(img); }
+        if(p.orderEmail){ const order = document.createElement('div'); order.className='small'; order.innerHTML = 'অর্ডার ইমেইল: <a href="mailto:'+p.orderEmail+'">'+p.orderEmail+'</a>'; el.appendChild(order); }
+
+        // actions (comment box)
+        const actions = document.createElement('div'); actions.className='actions';
+        const commentInput = document.createElement('input'); commentInput.type='text'; commentInput.placeholder='মন্তব্য লিখুন...'; commentInput.style.flex='1';
+        const sendBtn = document.createElement('button'); sendBtn.className='btn'; sendBtn.textContent='মেসেজ';
+        sendBtn.onclick = ()=>{
+          const v = commentInput.value.trim(); if(!v) return alert('মন্তব্য লিখুন');
+          p.comments = p.comments || [];
+          p.comments.push({text:v, ts: Date.now()});
+          saveJSON(POSTS_KEY, posts);
+          renderPosts();
+        }
+        actions.appendChild(commentInput); actions.appendChild(sendBtn);
+        el.appendChild(actions);
+
+        // comments
+        const commentsWrap = document.createElement('div'); commentsWrap.className='comments';
+        const comms = p.comments || [];
+        if(comms.length>0){
+          comms.forEach(c=>{
+            const cdiv = document.createElement('div'); cdiv.className='comment';
+            cdiv.innerHTML = '<div>'+escapeHtml(c.text)+'</div><div class="small">'+new Date(c.ts).toLocaleString()+'</div>';
+            commentsWrap.appendChild(cdiv);
+          })
+        }
+        el.appendChild(commentsWrap);
+
+        // admin-only actions: edit/delete
+        if(isAdmin()){
+          const adminAct = document.createElement('div'); adminAct.style.marginTop='8px';
+          const del = document.createElement('button'); del.className='ghost'; del.textContent='পোস্ট মুছুন';
+          del.onclick = ()=>{ if(confirm('পোস্ট মুছতে চান?')){ posts.splice(idx,1); saveJSON(POSTS_KEY,posts); renderPosts(); } }
+          adminAct.appendChild(del);
+          el.appendChild(adminAct);
+        }
+
+        postsArea.appendChild(el);
+      })
+    }
+
+    function escapeHtml(str){ return String(str).replace(/[&<>\"]/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[s]||s)); }
+
+    // Admin logic
+    function isAdmin(){ return localStorage.getItem(AUTH_KEY) === '1'; }
+    function showAdminPanel(){ adminPanel.style.display='block'; adminToggle.textContent='Admin (লগ আউট)'; }
+    function hideAdminPanel(){ adminPanel.style.display='none'; adminToggle.textContent='Admin Login'; }
+
+    adminToggle.addEventListener('click', ()=>{
+      if(isAdmin()){ // logout
+        localStorage.removeItem(AUTH_KEY); hideAdminPanel(); renderPosts();
+        return;
+      }
+      const pw = prompt('অ্যাডমিন পাসওয়ার্ড লিখুন:');
+      if(pw===ADMIN_PASSWORD){ localStorage.setItem(AUTH_KEY,'1'); showAdminPanel(); renderPosts(); alert('লগইন সফল') }
+      else alert('পাসওয়ার্ড ভুল');
+    });
+
+    document.getElementById('logoutAdmin').addEventListener('click', ()=>{ localStorage.removeItem(AUTH_KEY); hideAdminPanel(); });
+
+    // Add notice
+    document.getElementById('addNotice').addEventListener('click', ()=>{
+      if(!isAdmin()){ alert('কেবল অ্যাডমিনই নোটিশ দিতে পারবে'); return }
+      const txt = document.getElementById('noticeText').value.trim(); if(!txt) return alert('নোটিশ লিখুন');
+      notices.unshift({text: txt, ts: Date.now()}); saveJSON(NOTICES_KEY, notices); document.getElementById('noticeText').value=''; renderNotices();
+    });
+
+    // Add post
+    document.getElementById('addPost').addEventListener('click', ()=>{
+      if(!isAdmin()){ alert('কেবল অ্যাডমিনই পোস্ট দিতে পারবে'); return }
+      const title = document.getElementById('postTitle').value.trim();
+      const body = document.getElementById('postBody').value.trim();
+      const email = document.getElementById('postOrderEmail').value.trim();
+      const file = document.getElementById('postImage').files[0];
+      if(!title){ return alert('শিরোনাম দিন') }
+      const newPost = { title, body, orderEmail: email||'', ts: Date.now(), comments: [] };
+      if(file){ const reader = new FileReader(); reader.onload = (e)=>{ newPost.img = e.target.result; posts.unshift(newPost); saveJSON(POSTS_KEY,posts); clearPostForm(); renderPosts(); alert('পোস্ট প্রকাশিত'); }; reader.readAsDataURL(file); }
+      else { posts.unshift(newPost); saveJSON(POSTS_KEY,posts); clearPostForm(); renderPosts(); alert('পোস্ট প্রকাশিত'); }
+    });
+
+    function clearPostForm(){ document.getElementById('postTitle').value=''; document.getElementById('postBody').value=''; document.getElementById('postOrderEmail').value=''; document.getElementById('postImage').value=''; }
+
+    // on load
+    function init(){
+      renderNotices(); renderPosts();
+      if(isAdmin()) showAdminPanel(); else hideAdminPanel();
+    }
+
+    init();
+
+    // Expose a small API for editing About/Contact externally (developer convenience)
+    window.SC = {
+      setAbout(txt){ document.getElementById('aboutText').textContent = txt },
+      setContact(phone,email){ if(phone) document.getElementById('phone').textContent = phone; if(email) document.getElementById('email').textContent = email },
+      setAdminPassword(pw){ if(pw) { localStorage.removeItem(AUTH_KEY); /* require re-login */ ADMIN_PASSWORD = pw } }
+    }
+  </script></body>
+</html>
